@@ -1,5 +1,7 @@
 # FrontPsyhicSimulator
 
+A front end for and optical network simulator
+
 In this project, we wrote a program in the C ++ programming language, which facilitates
 working with the Hegons optical network simulator. We wrote the program in Microsoft
 Visual Studio. With the implementation, we got more familiar with the operations and use
