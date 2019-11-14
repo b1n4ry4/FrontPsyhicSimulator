@@ -1,0 +1,350 @@
+#include <Windows.h> // include Windows.h only if using WinMain
+
+#include <FL/Fl.H>
+
+#include <FL/Fl_Window.H> // za tvorjenje oken
+#include <FL/Fl_Light_Button.H> // za gumbe za vnos sosednosti med dvema vozlišèema
+#include <FL/Fl_Int_Input.H> // za kvadratke za vnos prometa med dvema
+#include <FL/Fl_Box.H> // za izpis kratkih besedil na zaslonu
+#include <FL/Fl_Menu_Bar.H> // za pripravo menija
+#include <FL/fl_ask.H> // za fl_alert (za izpis opozorilnega izpisa)
+#include <FL/Fl.H>
+
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <cstdlib>  // za funkcijo exit()
+#include <string>
+
+using namespace std;
+
+bool vozlisca = false;
+int vozlisca1 = 0; //za vnos vozlišè uporabnika
+bool valovne = false;
+bool sosednosti = false;
+bool promet = false;
+int stevilo_vozlisc; //za število vozlišè
+int stevilo_valovnih_dolzin; //za število valovnih dolžin
+int *pointer1; //kazalec ki bo kazal na matriko sosednosti
+int *pointer2; //kazalec ki bo kazal na matriko prometa
+int test = 6;
+//string ime_dat;
+
+void funkcija(char* ime); //deklaracija funkcije
+
+Fl_Window* win;
+
+void cb_input1(Fl_Int_Input* vozlisc) {
+	stevilo_vozlisc = atoi(vozlisc->value()); //atoi - sprememba iz C-string v int
+}
+
+void button_vozlisca(Fl_Widget* o, Fl_Window* v) { //CallBack za gumb vozlisca
+	vozlisca = true;
+	v->hide(); //skrije okno
+}
+
+void Menu_CB_Vozlisca(Fl_Widget* w, void*) {
+	if (vozlisca == false) { //èe še podatek ni vnešen
+		Fl_Window *win = new Fl_Window(340, 180, "Vnos vozlisc"); //prikaže v orodni vrstici "vnos vozlišè"
+		win->color(FL_WHITE); //barva
+		win->begin();
+		Fl_Int_Input *input = new Fl_Int_Input(0, 0, 340, 50, "Vnesite vozlisca:");
+		win->add(input);
+		input->callback((Fl_Callback*)cb_input1); //CallBack-pridobi/priredi število vozlišè
+		input->when(FL_WHEN_RELEASE | FL_WHEN_ENTER_KEY); //se proži ob pritisku
+		Fl_Button *button1 = new Fl_Button(65, 100, 200, 40, "OK"); //gumb OK
+		button1->color(FL_WHITE); //barva
+		win->end();
+		win->show();
+		button1->callback((Fl_Callback*)button_vozlisca, win); //CallBack ki skrije
+	}
+	else {
+		fl_alert("Vozlisca ste ze vnesli!"); //V primeru da so vozlišèa že vnešena
+	}
+	win->label("Izbira vozlisc");
+}
+
+void cb_input2(Fl_Int_Input* valovne) {
+	stevilo_valovnih_dolzin = atoi(valovne->value()); //atoi - sprememba iz C-string v int
+}
+
+void gumb_CB_valovne(Fl_Widget* o, Fl_Window* v) { //CallBack za gumb valovnih
+	valovne = true;
+	v->hide(); //skrije okno
+}
+
+void Menu_CB_Dolzine(Fl_Widget* w, void*) {
+	if (valovne == false) { //èe še podatek ni vnešen
+		Fl_Window *win = new Fl_Window(340, 180, "Vnos valovnih dolzin"); //prikaže v orodni vrstici "vnos valovnih dolžin"
+		win->color(FL_WHITE); //barva
+		win->begin();
+		Fl_Int_Input *input = new Fl_Int_Input(0, 0, 340, 50, "Vnesite valovne dolzine:");
+		input->color(FL_WHITE);
+		win->add(input);
+		input->callback((Fl_Callback*)cb_input2); //CallBack-pridobi/priredi število valovnih dolžin
+		input->when(FL_WHEN_RELEASE | FL_WHEN_ENTER_KEY); //se proži ob pritisku
+		Fl_Button *button1 = new Fl_Button(65, 100, 200, 40, "OK"); //gumb OK
+		button1->color(FL_WHITE); //barva
+		button1->callback((Fl_Callback*)gumb_CB_valovne, win); //CallBack ki skrije
+		win->end();
+		win->show();
+	}
+	else {
+		fl_alert("Valovne dolzine ste ze vnesli!");
+	}
+	win->label("Stevilo valovnih dolzin");
+}
+
+void cb_gumbek(Fl_Int_Input* w) {
+	for (int i = 0; i <= (stevilo_vozlisc - 1); i = i++) {
+		for (int j = i + 1; j <= (stevilo_vozlisc - 1); j++) {
+			if (w->x() == (j) * 50 && w->y() == (i + 1) * 50) {
+				pointer1[i * stevilo_vozlisc + j] = stevilo_valovnih_dolzin;
+				pointer1[j * stevilo_vozlisc + i] = stevilo_valovnih_dolzin;
+			}
+			cout << "1PONTER1: " << pointer1[i * stevilo_vozlisc + j] << endl;
+		}
+	}
+}
+
+void gumb_CB_sosednost(Fl_Widget* o, Fl_Window* v) { //CallBack za gumb valovnih
+	sosednosti = true;
+	v->hide(); //skrije okno
+}
+
+void Menu_CB_Sosednosti(Fl_Widget* w, void*) {
+
+	pointer1 = new int[stevilo_vozlisc * stevilo_vozlisc];
+
+	for (int i = 0; i < (stevilo_vozlisc*stevilo_vozlisc); i++) {
+		pointer1[i] = 0;
+	}
+
+
+	if (sosednosti == false) {
+		Fl_Window *win = new Fl_Window(1000, 1100, "Matrika sosednosti"); //prikaže v orodni vrstici "matrika sosednosti"
+		win->color(FL_WHITE); //barva
+		win->color(FL_WHITE); //barva
+		win->begin();
+		Fl_Box *besedilo = new Fl_Box(0, 0, 280, 20, "Za vnos matrike sosednosti izberite gumbe");
+		win->add(besedilo);
+		Fl_Button *buttonSos = new Fl_Button(450, 1000, 200, 40, "OK"); //gumb OK
+
+		int a = -15;
+
+		for (int i = 0; i < stevilo_vozlisc; i++) {
+			if (i > 0) {
+				Fl_Box *stevilka = new Fl_Box(a, 10, 60, 60);
+				stevilka->copy_label(to_string(i + 1).c_str());
+			}
+			a = a + 50;
+		}
+
+		a = 35;
+
+		for (int i = 0; i < (stevilo_vozlisc - 1); i++) {
+			Fl_Box *stevilka2 = new Fl_Box(0, a, 60, 60);
+			stevilka2->copy_label(to_string(i + 1).c_str());
+			a = a + 50;
+		}
+
+		int x = 0;
+		int y = 50;
+		int stolpci = 0;
+		for (int i = 0; i < (stevilo_vozlisc - 1); i++) {
+			for (int j = 1; j < stevilo_vozlisc; j++) {
+				x = 50;
+				x = x*j;
+				if (j > i) {
+					Fl_Light_Button  *gumbek = new Fl_Light_Button(x, y, 30, 30);
+					gumbek->callback((Fl_Callback*)cb_gumbek);
+					buttonSos->callback((Fl_Callback*)gumb_CB_sosednost, win); //CallBack ki skrije
+					buttonSos->color(FL_WHITE);
+					cout << "X: " << x << endl;
+					cout << "Y: " << y << endl;
+
+				}
+			}
+			y = y + 50;
+		}
+		win->end();
+		win->show();
+	}
+	else {
+		fl_alert("Matriko sosednosti ste ze vnesli!");
+	}
+	win->label("Matrika sosednosti");
+}
+
+
+void cb_inputcb2(Fl_Int_Input* promet) {
+	for (int i = 0; i < stevilo_vozlisc; i++) {
+		for (int j = 0; j < stevilo_vozlisc; j++) {
+			if (promet->x() == (j + 1) * 50 && promet->y() == (i + 1) * 50)
+				pointer2[i * stevilo_vozlisc + j] = atoi(promet->value());
+			cout << "2PONTER2: " << pointer2[i * stevilo_vozlisc + j] << endl;
+		}
+	}//if
+}
+
+void button_promet(Fl_Widget* o, Fl_Window* v) { //CallBack za gumb vozlisca
+	promet = true;
+	v->hide(); //skrije okno
+}
+
+void Menu_CB_Promet(Fl_Widget* w, void*) {
+
+	pointer2 = new int[stevilo_vozlisc * stevilo_vozlisc];
+
+	for (int i = 0; i < (stevilo_vozlisc*stevilo_vozlisc); i++) {
+		pointer2[i] = 0;
+	}
+
+	if (promet == false) { //èe še podatek ni vnešen
+		Fl_Window *win = new Fl_Window(1275, 1050, "Matrika prometa"); //prikaže v orodni vrstici "matrika sosednosti"
+		win->color(FL_WHITE); //barva
+		win->begin();
+		Fl_Box *besedilo = new Fl_Box(0, 0, 280, 20, "Za vnos matrike prometa izberite gumbe");
+		win->add(besedilo);
+		Fl_Button *button2 = new Fl_Button(1050, 50, 200, 40, "OK"); //gumb OK
+
+		int x = 0;
+		int y = 50;
+		int b = 50;
+
+		for (int i = 0; i < (stevilo_vozlisc); i++) {
+			Fl_Box *stevilka2 = new Fl_Box(0, b, 60, 60);
+			stevilka2->copy_label(to_string(i + 1).c_str());
+			b = b + 50;
+		}
+
+		b = 50;
+
+		for (int i = 0; i < (stevilo_vozlisc); i++) {
+			Fl_Box *stevilka3 = new Fl_Box(b, 0, 60, 60);
+			stevilka3->copy_label(to_string(i + 1).c_str());
+			b = b + 50;
+		}
+
+		for (int i = 0; i < (stevilo_vozlisc); i++) {
+			for (int j = 1; j < stevilo_vozlisc + 1; j++) {
+				x = 50;
+				x = x*j;
+				if (j != (i + 1)) {
+					Fl_Int_Input *inputPromet = new Fl_Int_Input(x, y, 50, 50, "");
+					inputPromet->callback((Fl_Callback*)cb_inputcb2); //CallBack-pridobi/priredi število vozlišè
+					inputPromet->when(FL_WHEN_RELEASE | FL_WHEN_ENTER_KEY); //se proži ob pritisku
+					button2->callback((Fl_Callback*)button_promet, win); //CallBack ki skrije
+					button2->color(FL_WHITE);
+					cout << "I je: " << i << endl;
+					cout << "J je: " << j << endl;
+				}
+			}
+			y = y + 50;
+			b = b + 50;
+		}
+		win->end();
+		win->show();
+	}
+	else {
+		fl_alert("Matriko prometa ste ze vnesli!");
+	}
+	win->label("Matrika prometa");
+}
+
+
+void close_cb(Fl_Widget* o, void*) { //callback za izhod
+	exit(0);
+}
+
+void Menu_CB_Izhod(Fl_Widget* w, void* nekoime) {
+	if (vozlisca == true && valovne == true && sosednosti == true && promet == true) {
+		char *y = static_cast<char*>(nekoime);
+		funkcija(y);
+		exit(0);
+	}
+	else
+	{
+		fl_alert("Niste vnesli vseh parametrov!");
+		exit(0);
+	}
+}
+
+int main(int argc, char* argv[]) {
+
+	//ime_dat = argv[2];
+
+	win = new Fl_Window(600, 300, argv[1]);
+	win->color(FL_WHITE);
+	Fl_Menu_Bar menubar(0, 0, win->w(), 25);
+	menubar.add("Datoteka/Izhod", 0, Menu_CB_Izhod, argv[2]);
+	menubar.add("Vrednosti/Vozlisca", 0, Menu_CB_Vozlisca);
+	menubar.add("Vrednosti/Valovne dolzine", 0, Menu_CB_Dolzine);
+	menubar.add("Vrednosti/Matrika sosednosti", 0, Menu_CB_Sosednosti);
+	menubar.add("Vrednosti/Matrika prometa", 0, Menu_CB_Promet);
+	win->end();
+	win->show();
+	return
+		(Fl::run());
+};
+
+
+void funkcija(char* ime) { //void - ne vraèa nièesar
+	ofstream datoteka; //stream za datoteko
+	datoteka.open(ime); //odpre datoteko
+	if (datoteka.is_open()) {
+		datoteka << stevilo_vozlisc; //zapiše vozlišèa
+		for (int i = stevilo_vozlisc; i > 0; i--) { //zanka za zapis 1 n v datoteko
+			datoteka << endl;
+			datoteka << "1 n";
+		}
+		datoteka << endl;
+		datoteka << "1" << endl; //zapiše 3x stevilo 1
+		datoteka << "1" << endl;
+		datoteka << "1" << endl;
+		for (int i = 0; i < stevilo_vozlisc; ++i) { //za datoteko za matriko sosednosti
+			for (int j = 0; j < stevilo_vozlisc; ++j) {
+				if (j == stevilo_vozlisc - 1) {
+					datoteka << pointer1[i*stevilo_vozlisc + j];
+				}
+				else {
+					datoteka << pointer1[i*stevilo_vozlisc + j] << " ";
+				}
+			}
+			datoteka << endl;
+		}
+
+		datoteka << endl;
+
+		for (int i = 0; i < stevilo_vozlisc; ++i) { //za datoteko za matriko prometa
+			for (int j = 0; j < stevilo_vozlisc; ++j) {
+				if (j == stevilo_vozlisc - 1)
+				{
+					datoteka << pointer2[i*stevilo_vozlisc + j];
+				}
+				else {
+					datoteka << pointer2[i*stevilo_vozlisc + j] << " ";
+				}
+
+			}
+			datoteka << endl;
+		}
+		datoteka.close();
+		fl_alert("Ustvarila se je nova datoteka!");
+	}
+	else {
+		fl_alert("Ne morem odpreti datoteke!");
+	}
+
+	try
+	{
+		delete[] pointer1;
+		pointer1 = nullptr;
+		delete[] pointer2;
+		pointer2 = nullptr;
+	}
+	catch (const std::exception& ex)
+	{
+		cout << ex.what();
+	}
+}

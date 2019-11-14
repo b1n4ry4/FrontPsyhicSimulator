@@ -1,0 +1,958 @@
+﻿// NovPCConsoleApplication3.cpp : Defines the entry point for the console application.
+//
+
+#include "stdafx.h" 
+#include <iostream> //standardna knjižica
+#include <string> //knjižica za obdelovanje s stringi
+#include <fstream> //knjižica za branje/pisanje datotek
+#include <sstream> //knjižica za branje/pisanje datotek
+#include <windows.h>//knjižice od profesorice
+#include <shlobj.h> 
+#include <filesystem> //knjižica za dostop do direktorijskih datotek
+#include <vector> //za prostor
+#include <deque> 
+#include <experimental/filesystem> //knjižica za dostop do direktorijskih datotek
+#include <algorithm>
+
+//#define Rows 15
+//#define Cols 15
+
+using namespace std;
+namespace fs = std::experimental::filesystem;
+
+
+string funkcija(); //funkcija za case 3-zastavice
+void replaceAll(std::string& source, const std::string& from, const std::string& to); //funkcija za spremembo direktorija za shellexecute
+void transpose_CSV(const std::string& filename);
+
+int main(int argc, char * argv) {
+	string direktorij = ""; // spremenljivka za vnos delovnega direktorija od uporabnika
+	string direktorijglob = ""; //za manipulacijo spremenljivke direktorij
+	int konec = 0; //za konec do/while - menija
+	int izbira; //spremenljivka za izbrano opcijo uporabnika
+	int case2; //spremenljivka za izpis na zaslon (.hnt) pri case2
+	int krivuljaizb = 0; //za izbiro krivulje - imena krivulje
+	string krivulja = ""; //vnos imena krivulje
+	const string presledek = " "; //dodajanje presledkov v string
+	string novadat = ""; //vnos imena nove datoteke
+	int zakljucekmax = 0; //za računanje v polju
+	int dolzinapolja = 0; //dolžina polja
+	int izbiracsv = 1; //če uporabnik želi izrisati datoteko .csv
+	int izbirac3 = 1; //v primeru da uporabnik želi izpisati datoteko
+	string imegrafa = ""; //ime grafa za GNUplot
+	string omrezje = "";
+	string posevnica = "\\"; //string za dodajanje poševnice
+
+	cout << "Vnesite delovni direktorij, v katerem se nahaja datoteka hegons.exe: " << endl; //vnos delovnega direktorija (oz. vhodne datoteke)
+	getline(cin, direktorij); //funkcija ki zapiše uporabnikov vnos v string "direktorij"
+							  //cout << "Izbrali ste: " << direktorij << endl << endl;
+
+	replaceAll(direktorij, "\\", "\\\\"); //za pravilno obdelavo direktorija
+
+	do {
+		cout << "\n";
+		cout << "Izberite funkcijo z zaporedno stevilko:\n"; //osnoven izpis menija za uporabnika
+		cout << "1) vnos omrezja z GUI\n"; //izbira 1 - GUI
+		cout << "2) konfiguracija za simulacijo (.hnt)\n"; //izbira 2 - konfiguracija simulacije
+		cout << "3) klic ene simulacije\n"; //izbira 3 - klic ene simulacije
+		cout << "4) priprava poskusa (.bat)\n"; //izbira 4 - priprava (bat)
+		cout << "5) izvedba izbranega poskusa\n"; //izbira 5 - izvedba
+		cout << "6) izhod\n"; //izbira 6 - izhod
+		cout << "\n"; //new line
+		cout << "Vnesite stevilo za funkcijo: ";
+		cin >> izbira; //uporabnik izbere case stavek
+		cout << "izbira je: " << izbira; //pokaže uporabniku izbiro
+		cout << "\n"; //newline
+
+
+		switch (izbira) { //glavna zanka za izbiro in manipuliranje
+		case 1: //izbira 1
+		{
+			cout << "vnos omrezja z GUI" << endl << endl; //izpis izbire uporabnika
+			string omrezje = "";
+			string omrezjepot = "";
+
+			std::string path3 = direktorij; //izpis direktorija oz. datotek
+			replaceAll(path3, "\\\\", "\\");
+			for (auto & p : fs::directory_iterator(path3))
+				if (p.path().extension() == ".hnt") //z končnico .hnt
+					std::cout << p << std::endl;
+			cout << endl;
+
+		JUMP:
+			cout << "vnesite ime omrezja, ki se ne obstaja (brez koncnice): " << endl;
+			cin >> omrezje;
+			omrezjepot = direktorij + "\\" + omrezje + ".hnt";
+			std::string path4 = direktorij; //preveri če datoteka že obstaja
+			for (auto & p : fs::directory_iterator(path4))
+				if (p.path().extension() == ".hnt") //z končnico .hnt
+						if (omrezjepot == p) {
+							cout << "Ime omrezja ze obstaja!" << endl;
+							goto JUMP;
+						}
+			cout << "Uspesno ste vnesli ime omrezja." << endl;
+
+			string command = "";
+			command = omrezje + presledek + omrezjepot;
+
+			string doParameters = command; //sprememba spremenljivke tipa string v drug tip za shell
+			std::wstring sdoParameters = std::wstring(doParameters.begin(), doParameters.end());
+			LPCWSTR  dirdoParameters = (LPCWSTR)sdoParameters.c_str();
+
+			//string doFile = direktorij+"\\Win32Project6.exe"; //sprememba spremenljivke tipa string v drug tip za shell
+			string doFile = direktorij + "\\GraficniVmesnik.exe"; //sprememba spremenljivke tipa string v drug tip za shell
+			std::wstring sdoFile = std::wstring(doFile.begin(), doFile.end());
+			LPCWSTR  dirdoFile = (LPCWSTR)sdoFile.c_str();
+
+			SHELLEXECUTEINFO ShExecInfo = { 0 };
+			ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+			ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+			ShExecInfo.hwnd = NULL;
+			ShExecInfo.lpVerb = NULL;
+			ShExecInfo.lpFile = dirdoFile;
+			ShExecInfo.lpParameters = dirdoParameters;
+			ShExecInfo.lpDirectory = NULL;
+			ShExecInfo.nShow = SW_SHOW;
+			ShExecInfo.hInstApp = NULL;
+			ShellExecuteEx(&ShExecInfo);
+			WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
+			CloseHandle(ShExecInfo.hProcess);
+
+
+
+		}
+			break;
+		case 2:
+		{
+			cout << "konfiguracija za simulacijo (.hnt)" << endl; //osnovna navodila za case 2
+			cout << "\n"; //newline
+			cout << "Moznosti izbire: " << endl; //navodila za uporabnika
+
+			std::string path = direktorij; //izpis direktorija oz. datotek
+			replaceAll(path, "\\\\", "\\");
+			for (auto & p : fs::directory_iterator(path))
+				if (p.path().extension() == ".hnt") //izpiše vse .hnt datoteke
+					std::cout << p << std::endl;
+
+			cout << endl; //new line
+			cout << "Vnesite ime obstojece vhodne datoteke (s koncnico): " << endl; //uporabnik izbere datoteko iz seznama (.hnt)
+			string datizp = ""; //ustvari string da ga uporabnik vnese
+			cin >> datizp; //vnos uporabnika
+			direktorijglob = direktorij + posevnica + datizp; //priprava izraza (prave poti) kar je izbral uporabnik
+			cout << direktorijglob; //prikaže izbrano datoteko (pot) uporabniku
+			cout << endl << endl; //new line za uporabnika
+			cout << "Ali zelite izpisati vhodno datoteko? (.hnt)" << endl; //navodila ali želi uporabnik izpisat vhodno datoteko
+			cout << "'1' za da in '0' za ne!" << endl; //navodila za izbiro da in ne
+			cin >> case2; //ali želi uporabnik zapisati (.hnt) na zaslon
+			if (case2 == 1) { //if case za izbiro
+				cout << "Izbrali ste da." << endl; //izbira 1=da
+
+				std::ifstream input(direktorijglob); //odpre pot do datoteke
+				std::string line; //ustvari string line za izpis datoteke
+				if (!input) std::cerr << "Could not open the file!" << std::endl; //če datoteke ne najde, izpiše
+				else //če najde gre naprej
+				{
+					cout << "\n"; //newline
+					cout << "datoteka odprta." << endl << endl; //če datoteko najde, jo odpre
+					while (getline(input, line)) //getline-pridobi celoten line
+					{
+						std::cout << line << std::endl; //bere iz datoteke in zapiše v konzolo
+					}
+					input.close(); //zapre datoteko
+				}
+				cout << endl; //newline
+			}
+			if (case2 == 0) { //izbira2=ne
+				cout << "izbrali ste ne." << endl << endl; //v primeru da uporabnik izbere ne
+			}
+			if (case2 != 0 && case2 != 1) { //kakršna koli druga izbira (pomota) privzeto ne izpiše datoteke
+				cout << "Napacen vnos, privzeta izbira je NE." << endl << endl; //izpiše uporabniku
+			}
+
+
+			cout << "Ali  zelite spremeniti katera vozlisca bodo imele pretvornike in stevilo valovnih dolzin na povezavah?" << endl; //navodila ali želi spremeniti pretvornike in stevilo valovnih dolzin
+			cout << "'1' za da in '0' za ne!" << endl; //izbira ali bo uporabnik kaj spreminjal (da se ve če se ustvari nova datoteka ali ne)
+			int pretvorniki = 0; //ustvari spremenljivko za izbiro uporabnika
+			cin >> pretvorniki; //uporabnik vnese izbiro
+
+			if (pretvorniki != 0 && pretvorniki != 1) { //v primeru napačne izbire
+				do {
+					cout << "Napacen vnos, vnesi ponovno: " << endl; //izpiše uporabniku
+					cout << "Nov vnos: " << endl; //ponoven poskus
+					cin >> pretvorniki; //ponoven vnos
+				} while (pretvorniki != 0 && pretvorniki != 1); //dokelr pogoj ni izpolnjen
+			}
+
+			if (pretvorniki == 1) { //uporabnik se odloči da
+
+				string line; //string line za shranjevanje iz getline - kasneje
+				ifstream stream(direktorijglob); //ifstream - bere iz datoteke
+				getline(stream, line); //getline-pridobi celoten line
+				stringstream convert1(line); //sprememba iz tipa string
+				convert1 >> dolzinapolja;    //v tip int
+				stream.close(); //zapre ifstream stream
+
+				dolzinapolja = (dolzinapolja * 2) + 4 + dolzinapolja*dolzinapolja + dolzinapolja*dolzinapolja + 2; //izračuna max za ustvarjanje polja
+				string* polje = new string[dolzinapolja]; //ustvarjanje dinamičnega polja (max=999)
+				ifstream fin(direktorijglob); //ustvari datoteko v direktoriju ki jo je vnesel uporabnik
+				if (fin.is_open()) { //odpre datoteko
+									 //while (!fin.eof()) { //bere do konca
+					for (int j = 0; j < dolzinapolja; j++) { //vsebino
+						fin >> polje[j]; //izpisuje v polje
+						zakljucekmax = j; //shrani kar je nazadnje
+					}
+				}
+				//}
+
+				int vozlisca = 0;
+				stringstream convert(polje[0]); //sprememba iz stringa v int
+				convert >> vozlisca; //sprememba iz stringa v int
+				cout << endl; //newline
+
+				cout << "Vnesite ime nove datoteke (s koncnico .hnt): " << endl; //navodila za vnos imena nove datoteke
+				cin >> novadat; //uporabnik vnese ime nove datoteke
+				novadat = direktorij + posevnica + novadat; //ustvari se direktorij kjer se ustvari datoteka
+				cout << novadat << endl; //izpiše uporabniku novo datoteko
+				std::ofstream o(novadat); //ofstream za pisanje v novo datoteko
+				o << polje[0] << endl; //izpiše prvi del
+				cout << endl; //new line
+
+				cout << "Ali zelite spremeniti pretvornike?" << endl; //uporabniki si lahko izbira ali bo spremenil samo pretvornike, valovne dolžine ali oboje
+				cout << "'1' za da in '0' za ne!" << endl; //navodila da/ne
+				int izbira1 = 0; //spremenljivka za izbiro
+				cin >> izbira1; //vnos uporabnika za izbiro
+
+				if (izbira1 != 0 && izbira1 != 1) { //if-če vnese narobe
+					do {
+						cout << "Napacen vnos, vnesi ponovno: " << endl; //javlja da je vnesel narobe
+						cout << "Nov vnos: " << endl; //navodila za nov vnos
+						cin >> izbira1; //moznost novega vnosa
+					} while (izbira1 != 0 && izbira1 != 1); //dokler ne bo vnesel prave izbire
+				}
+
+				if (izbira1 == 1) { //če izbere da
+					int stevecvozlisc = 1; //spremenljivka kot "števec"
+					int stevecvozlisc1 = vozlisca + 1; //dokler ne bo šel skozi vseh vozlišč
+					do { //vnosi za pretvornike 1= 1 y in 0= 1 n
+						cout << "Ali zelite spremeniti pretvornike " << stevecvozlisc << ". vozliscu?" << endl; //navodila za vsako vozlišče
+						stevecvozlisc++; //stevec vozlisc se poveča za 1
+						cout << "'1' za da in '0' za ne!" << endl;// v primeru izbire da, uporabnik vsakemu vozliscu
+						int ifst = 0;							  //doloci ali bo vseboval pretvornik ali ne
+						cin >> ifst; //uporabnik izbere
+						int stevecvozlisc = 0;
+
+						if (ifst == 1) { //če da
+							o << "1 y" << std::endl; //se zapiše 1 y(es)
+						}
+						else { //če ne
+							o << "1 n" << std::endl; //se zapiše  n(o)
+						}
+					} while (stevecvozlisc < stevecvozlisc1); //zanka se izvaja tolikokrat, koliko je vozlisc
+				}
+				else if (izbira1 == 0) { //v primeru izbire ne, se datoteka prepise
+					int vozlisca1 = vozlisca * 2; //odsek kode, če uporabnik
+					for (int i = 1; i < vozlisca1; i = i + 2) { //ne želi
+						o << polje[i] << " "; //spremeniti pretvornikov
+						int j = i + 1; //se datoteka prepiše
+						o << polje[j] << endl;
+					}
+				}
+
+				o << "1" << endl; //zapis 3x1 ki bo vedno enak
+				o << "1" << endl; //zapis 3x1 ki bo vedno enak
+				o << "1" << endl; //zapis 3x1 ki bo vedno enak
+
+				cout << endl; //newline
+				cout << "Ali zelite spremeniti stevilo valovnih dolzin na povezavah?" << endl; //možnost izbire ali uporabnik
+				cout << "'1' za da in '0' za ne!" << endl;								//želi spreminjati valovne dolžine ali ne
+				int valovned = 0; //ustvarjanje spremenljivke za izbiro uporabnika
+				cin >> valovned; //vnos uporabnika
+
+				if (valovned != 0 && valovned != 1) { //v primeru da ne vnese ustreznih izbir
+					do {
+						cout << "Napacen vnos, vnesi ponovno: " << endl; //prikaže napačen vnos
+						cout << "Nov vnos: " << endl; //prikaže navodila za nov vnos
+						cin >> valovned; //nov vnos uporabnika
+					} while (valovned != 0 && valovned != 1); //dokelr ne bo vnesel usrezne izbire
+				}
+
+				if (valovned == 1) { //v primeru da izbere da
+					cout << "Vnesite stevilo, s katerim zelite zamenjati valovne dolzine: " << endl; //uporabnika prikaže navodila če želi spremeniti valovne dolžine
+					string vpisal = ""; //ustvari string za vnos uporabnika
+					cin >> vpisal; //uporabnik vnese število
+					int stevec = 0; //števec
+					int vozlisca4 = vozlisca * 2 + 4; //priprava polja za izpis datotek do (vključno) z valovnimi dolžinami
+					int vozlisca5 = vozlisca*vozlisca + vozlisca4; //max vozlišč
+					for (vozlisca4; vozlisca4 < vozlisca5; vozlisca4++) { //se izvaja dokler ne bo prišel do konca
+						if (polje[vozlisca4] > "0") //če je polje drugačno od "0"
+							polje[vozlisca4] = vpisal; //zapiše kar je uporabnik vpisal
+						o << polje[vozlisca4]; //se zapiše v polje
+						stevec++; //števec se poveča
+						if (stevec%vozlisca != 0) //če je števec vozlišč različen od 0
+							o << " "; //se zapiše " " - presledek
+						else o << endl; //drugače new line - ko je na koncu
+					}
+				}
+				else if (valovned == 0) { // v primeru da uporabnik ne bo spreminjal valovne dolžine
+					int stevec = 0;			  //se prepiše celotna datoteka od prej
+					int vozlisca2 = vozlisca * 2 + 4;
+					int vozlisca3 = vozlisca*vozlisca + vozlisca2;
+					for (vozlisca2; vozlisca2 < vozlisca3; vozlisca2++) {
+						o << polje[vozlisca2];
+						stevec++;
+						if (stevec%vozlisca != 0)
+							o << " ";
+						else o << endl;
+					}
+				}
+				else cout << "Napacen vnos, privzeta izbira NE." << endl; //v primeru da se uporabnik zatipka se izvede privzeta izbira (da ne želi spreminjat)
+
+				o << endl; //skok v novo vrstico
+
+				zakljucekmax = vozlisca * 2 + (vozlisca*vozlisca) + (vozlisca*vozlisca) + 4; //priprava spremenljivke (kazalec na zadnjo polje)
+				int zakljucek = vozlisca * 2 + (vozlisca*vozlisca) + 4;	//priprava spremenljivke (kazalec na začetek 2. matrike)
+				int stevec1 = 0; //števec
+				for (zakljucek; zakljucek < zakljucekmax; zakljucek++) { //loop-a dokler ne pride do konca
+					o << polje[zakljucek]; //izpisuje v datoteko
+					stevec1++; //poveča števec
+					if (stevec1%vozlisca != 0) { //prepisuje datoteko
+						o << " "; //zapiše presledek v datoteko
+					}
+					else if (zakljucek < zakljucekmax) { //zanka da ne prepiše zadnjih dveh vrstic
+						o << endl; //zapiše presledek v datoteko
+					}
+				}
+				delete[] polje; //izbris dinamičnega polja, ko se več ne uporablja
+			}
+			else if (pretvorniki == 0) { //če uporabnik izbere ne
+				cout << "Izbrali ste ne" << endl; //prikaže izbiro ki jo je vnesel uporabnik
+			}
+			else cout << "Napacen vnos, privzeta izbira NE." << endl; //v primeru napačnega vnosa se izvede privzeta izbira
+			break; //break
+		}
+		case 3:
+		{
+			cout << "Klic ene simulacije." << endl << endl;
+
+			cout << "Vnesite ime vhodne datoteke (s koncnico): " << endl; //ime vhodne datoteke
+			string vhodna = "";
+			cin >> vhodna;
+			cout << "Vnesli ste ime: " << vhodna << endl; //prikaz vnosaa imena vhodne datotek
+			vhodna = "-nt:" + vhodna;
+			cout << endl;
+
+			cout << "Vnesite ime tekstovne izhodne datoteke (s koncnico .txt): " << endl; //ime prve izhodne datoteke
+			string izhodna1 = "";
+			cin >> izhodna1;
+			cout << "Vnesli ste ime: " << izhodna1 << endl; //prikaz vnosaa imena prve izhodne datoteke
+			izhodna1 = "> " + izhodna1;
+			cout << endl;
+
+			cout << "Vnesite ime izhodnih .csv datotek (brez koncnice): " << endl; //ime druge izhodne datoteke
+			string izhodna2 = "";
+			cin >> izhodna2;
+			string zaizpiscsv = ""; //za datoteke ki so se tvorile ob poskusu
+			zaizpiscsv = izhodna2;
+			cout << "Vnesli ste ime: " << izhodna2 << endl; //prikaz vnosaa imena druge izhodne datoteke
+			cout << endl;
+			izhodna2 = "-of:" + izhodna2;
+
+			cout << "Ali zelite vnesti ime krivulje?" << endl;
+			cout << "'1' za da in '0' za ne!" << endl;
+			cin >> krivuljaizb;
+			if (krivuljaizb == 1) { //izbira za uporabnika ali želi vnesti ime krivulje
+				cout << "Vnesite ime krivulje: " << endl; //ime druge izhodne datoteke
+				cin >> krivulja;
+				cout << "Vnesli ste ime: " << krivulja << endl; //prikaz vnosaa imena druge izhodne datoteke
+				cout << endl;
+				krivulja = "-or:" + krivulja;
+			}
+			else if (krivuljaizb == 0) {
+				cout << "Izbrali ste ne" << endl;
+			}
+			else cout << "Napacen vnos. Dolocena privzeta izbira ne." << endl;
+
+			cout << "Izbira zastavic" << endl; //osnovna navodila za izbiro zastavic
+
+			cout << "Vnesite stevilo simulacijskih tekov:" << endl; //navodila za zastavico -b
+			string osma = "-b:"; //del zastavice
+			string osmast = "";  //inicializacija drugega dela in ustvarjanje spremenljivke za drug del
+			cin >> osmast; //vnos števila zastavice
+			osma = osma + osmast; //končna sestava zastavice
+			cout << endl;
+
+			cout << "Vnesite trajanje simulacijskega teka v casovnih enotah:" << endl; //navodila za zastavico -t
+			string deveta = "-t:"; //del zastavice
+			string devetast = "";  //inicializacija drugega dela in ustvarjanje spremenljivke za drug del
+			cin >> devetast; //vnos števila zastavice
+			deveta = deveta + devetast; //končna sestava zastavice
+			cout << endl;
+
+			string ukaz = "/C" + presledek + funkcija();
+
+			if (krivuljaizb == 1) {
+				ukaz = ukaz + presledek + osma + presledek + deveta + presledek + izhodna2 + presledek + krivulja + presledek + vhodna + presledek + izhodna1; //sestava ukaza za klic hegonsa v primeru da se uporablja krivulja
+			}
+			else ukaz = ukaz + presledek + osma + presledek + deveta + presledek + izhodna2 + presledek + vhodna + presledek + izhodna1;//sestava ukaza za klic hegonsa v primeru da se ne uporablja krivulja
+
+			cout << ukaz << endl;;
+
+			string doRelease = direktorij; //sprememba spremenljivke tipa string v drug tip za shell
+			std::wstring sdoRelease = std::wstring(doRelease.begin(), doRelease.end());
+			LPCWSTR  dirdoRelease = (LPCWSTR)sdoRelease.c_str();
+
+			string doParameters = ukaz; //sprememba spremenljivke tipa string v drug tip za shell
+			std::wstring sdoParameters = std::wstring(doParameters.begin(), doParameters.end());
+			LPCWSTR  dirdoParameters = (LPCWSTR)sdoParameters.c_str();
+
+			SHELLEXECUTEINFO ShExecInfo = { 0 }; //izvedba ki omogoča zagon programa hegons (cmd)
+			ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+			ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+			ShExecInfo.hwnd = NULL;
+			ShExecInfo.lpVerb = NULL;
+			ShExecInfo.lpFile = L"cmd.exe";
+			ShExecInfo.lpParameters = dirdoParameters;  //ukaz za izvedbo ukaza, katerega je vpisal uporabnik
+			ShExecInfo.lpDirectory = dirdoRelease; //ukaz za določitev direktorija
+			ShExecInfo.nShow = SW_SHOW;
+			ShExecInfo.hInstApp = NULL;
+			ShellExecuteEx(&ShExecInfo);
+			WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
+			CloseHandle(ShExecInfo.hProcess);
+
+			string direktorijglob1 = "";
+			direktorijglob1 = direktorij + "\\\\";
+			string uporcsv = "";
+
+			cout << endl;
+
+			do {
+				cout << "V primeru da zelite izpisati se kaksno datoteko, izberite '1', za vstop v zacetni meni, izberite '0'" << endl;
+				cout << "Vnesite zeljeno izbiro: " << endl;
+				cin >> izbirac3;
+
+				if (izbirac3 == 1) {
+					uporcsv = "";
+					direktorijglob1 = direktorij + "\\\\";
+
+					cout << endl;
+					cout << "Izberite, katero od datotek .csv zelite izpisati? (s koncnico):" << endl;
+					std::string path = direktorij; //izpis direktorija oz. datotek katere so tvorijo v poskusu
+					for (auto& p : fs::directory_iterator(direktorij))
+					{
+						std::string file_name = p.path().filename().string();
+						if (file_name.find(zaizpiscsv) == 0)
+						{
+							if (p.path().extension() == ".csv") {
+								std::cout << file_name << std::endl;
+							}
+						}
+					}
+
+					cout << endl;
+					cin >> uporcsv;
+					cout << endl;
+					direktorijglob1 = direktorijglob1 + uporcsv;
+
+					std::ifstream input(direktorijglob1); //odpre pot do datoteke
+					std::string line;
+
+					if (!input) std::cerr << "Could not open the file!" << std::endl; //če datoteke ne najde, izpiše
+					else
+					{
+						cout << "\n";
+						cout << "datoteka odprta." << endl << endl; //če datoteko najde, jo odpre
+						while (getline(input, line))
+						{
+							std::cout << line << std::endl; //bere iz datoteke in zapiše v konzolo
+						}
+						input.close();
+					}
+					cout << endl;
+				}
+				else {
+					izbirac3 = 0;
+				};
+			} while (izbirac3 == 1);
+		}
+		break;
+		case 4:
+		{
+			cout << "priprava poskusa (.bat)" << endl << endl;
+			cout << "Vnesite ime poskusa" << endl;
+			string imeposkusa;
+			cin >> imeposkusa;
+			cout << endl;
+			string imeposkusa1 = direktorij + "\\\\" + imeposkusa + ".bat";
+
+			cout << "Vnesite stevilo simulacijskih tekov: " << endl;
+			int sttek = 0;
+			cin >> sttek;
+			cout << "Vnesite trajanje simulacijskega teka v casovnih enotah:" << endl;
+			int tratek = 0;
+			cin >> tratek;
+
+			cout << "Vnesite stevilo krivulj: " << endl;
+			int stkriv = 0;
+			cin >> stkriv;
+			cout << "Vnesite stevilo poskusov (simulacij) v krivulji:" << endl;
+			int steviloposkusov = 0;
+			cin >> steviloposkusov;
+
+			string imekrivulje = "";
+			string imekrivuljeif = "";
+			ofstream write(imeposkusa1);
+
+			int krivulja = 0;
+			stkriv++;
+			for (int i = 1; i < stkriv; i++) { //krivulja
+				cout << "Vnesite ime " << i << "." << "krivulje: " << endl << endl;
+				cin >> imekrivulje;
+
+				for (int j = 0; j < steviloposkusov; j++) { //poskus
+					int poskus = 0;
+					poskus = j + 1;
+					cout << "Vnos za " << poskus << ". poskus." << endl;
+
+					cout << "Vnesite ime vhodne datoteke (s koncnico): " << endl;
+					string vhod;
+					cin >> vhod;
+					cout << endl;
+
+					cout << "Vnesite ime tekstovne izhodne datoteke (s koncnico.txt) :" << endl;
+					string izhod;
+					cin >> izhod;
+					cout << endl;
+
+					string z = funkcija();
+					write << z;
+					write << presledek << "-b:" << sttek << presledek << "-t:" << tratek << presledek;
+					write << "-of:" << imeposkusa;
+					if (krivulja == 0) {
+						write << " -or:" << imekrivulje;
+						krivulja = 1;
+					}
+
+					write << " -nt:" << vhod;
+					write << " " << ">" << " ";
+					write << izhod << endl;
+				}
+				write << endl;
+				krivulja = 0;
+			}
+			break;
+		}
+		case 5:
+		{
+			cout << "izvedba izbranega poskusa" << endl << endl;
+
+			cout << "Vpisite ime datoteke .bat, ki jo zelite pognati" << endl;
+			std::string path1 = direktorij; //izpis direktorija oz. datotek
+			for (auto & p : fs::directory_iterator(path1))
+				if (p.path().extension() == ".bat") //z končnico .bat
+					std::cout << p << std::endl;
+			string imebat;
+			cin >> imebat;
+			string ukazbat = "/C" + presledek + imebat;
+
+			string doRelease = direktorij; //sprememba spremenljivke tipa string v drug tip za shell
+			std::wstring sdoRelease = std::wstring(doRelease.begin(), doRelease.end());
+			LPCWSTR  dirdoRelease = (LPCWSTR)sdoRelease.c_str();
+
+			string doParameters = ukazbat; //sprememba spremenljivke tipa string v drug tip za shell
+			std::wstring sdoParameters = std::wstring(doParameters.begin(), doParameters.end());
+			LPCWSTR  dirdoParameters = (LPCWSTR)sdoParameters.c_str();
+
+			SHELLEXECUTEINFO ShExecInfo = { 0 };
+			ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+			ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+			ShExecInfo.hwnd = NULL;
+			ShExecInfo.lpVerb = NULL;
+			ShExecInfo.lpFile = L"cmd.exe";
+			ShExecInfo.lpParameters = dirdoParameters;
+			ShExecInfo.lpDirectory = dirdoRelease;
+			ShExecInfo.nShow = SW_SHOW;
+			ShExecInfo.hInstApp = NULL;
+			ShellExecuteEx(&ShExecInfo);
+			WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
+			CloseHandle(ShExecInfo.hProcess);
+
+			imebat = imebat + "_";
+			do {
+				cout << endl;
+				cout << "Izberite katero od datotek .csv zelite izrisati? (brez koncnice):" << endl;
+				std::string path = direktorij; //izpis direktorija oz. datotek katere so tvorijo v poskusu
+				for (auto& p : fs::directory_iterator(direktorij))
+				{
+					std::string file_name = p.path().filename().string();
+					if (file_name.find(imebat) == 0)
+					{
+						if (p.path().extension() == ".csv") {
+							std::cout << file_name << std::endl;
+						}
+					}
+				}
+
+				string izris = ""; // normalen
+				string izris1 = ""; //.bat
+				string izris2 = ""; //.csv
+				cout << endl;
+				cout << "Vnos: ";
+				cin >> izris;
+				imegrafa = izris;
+
+				izris = direktorij + "\\\\" + izris;
+				string izrisx = izris;
+				izris1 = izris + ".dat"; //datoteka za pisanje .dat
+				izris2 = izrisx + ".csv"; //datoteka za branje .csv
+
+				int dolzinastr = 0;
+				dolzinastr = imegrafa.length();
+
+				replaceAll(imegrafa, "_", "\\\_"); //za lepši izpis imena mytitle za GNUplot
+
+				ifstream file(izris2);
+				string value;
+
+				vector<string> myvector; //definicija vektorja
+				do {
+					getline(file, value, '\n');
+					if (value != "") {
+						string value1 = value + ",";
+						myvector.push_back(value1);
+					}
+				} while (!file.eof());
+				std::cout << "myvector ima " << int(myvector.size()) << " vrstic\n"; //izpis rezultata vectorja
+				int vrstic = int(myvector.size()); //izpis koliko vrstic ima
+
+				for (size_t n = 0; n < myvector.size(); n++) {
+					cout << myvector[n] << " " << endl;
+					cout << endl;
+				}
+
+				int numOfChar = 0;
+				std::cout << "Velikost stringa: " << myvector[1].length() << " znakov\n";
+
+				for (int i = 0; i < myvector[1].length(); i++)
+				{
+					if (myvector[1][i] == ',')
+					{
+						numOfChar++;
+					}
+				}
+				cout << ", se pojavi: " << numOfChar << "krat " << "torej ima: " << numOfChar << " stolpcev" << endl; //izpis koliko ima stolpcev
+				int stolpcev = numOfChar;
+
+				vector< vector<string> > f(vrstic, vector<string>(stolpcev));
+				stringstream out;
+
+						for (size_t n = 0; n < myvector.size(); n++) {
+							out << myvector[n] << endl;
+						}
+
+						std::string line;
+
+						int col = 0;
+						int row = 0;
+						while (std::getline(out, line))
+						{
+							std::istringstream iss(line);
+							std::string result;
+							while (std::getline(iss, result, ',')) //loči stringe po vejici
+							{
+								cout << endl;
+								f[row][col] = result;
+								std::cout << result << std::endl;
+								std::cout << "column " << col << std::endl;
+								std::cout << "row " << row << std::endl;
+								col++;
+							}
+							row++;
+							col = 0;
+						}
+
+				for (int i = 0; i < stolpcev; i++) {
+					for (int j = 0; j < vrstic; j++) {
+						cout << f[j][i] <<endl;
+					}//for
+				}//for
+				
+			ofstream w(izris1); //pisanje polja v datoteko .dat (transponirano) za izris GNUplot
+				for (int i = 0; i < stolpcev; i++) {
+					for (int j = 0; j < vrstic; j++) {
+						cout << f[j][i] << endl;
+						w << " "; //za GNUplot
+						w << f[j][i];
+						cout << f[j][i] << endl;
+					}
+					w << endl;
+				}
+
+				string zakljucno = "";
+
+				std::string f_vrstic = std::to_string(vrstic); //to_string za spremembo niza v string
+
+				zakljucno = "-e \"mytitle = '" + imegrafa + "'; filename = '" + izris1 + "'; n = " + f_vrstic + "\" " + direktorij + "\\risanjehegons.p.txt";
+
+				string doParameter = zakljucno; //sprememba spremenljivke tipa string v drug tip za shell
+				std::wstring sdoParameters = std::wstring(doParameter.begin(), doParameter.end());
+				LPCWSTR  dirdoParameter = (LPCWSTR)sdoParameters.c_str();
+
+				SHELLEXECUTEINFO ShExecInfo1 = { 0 };
+				ShExecInfo1.cbSize = sizeof(SHELLEXECUTEINFO);
+				ShExecInfo1.fMask = SEE_MASK_NOCLOSEPROCESS;
+				ShExecInfo1.hwnd = NULL;
+				ShExecInfo1.lpVerb = NULL;
+				ShExecInfo1.lpFile = L"gnuplot.exe"; //
+				ShExecInfo1.lpParameters = dirdoParameter;
+				ShExecInfo1.lpDirectory = NULL;
+				ShExecInfo1.nShow = SW_SHOW;
+				ShExecInfo1.hInstApp = NULL;
+				ShellExecuteEx(&ShExecInfo1);
+				WaitForSingleObject(ShExecInfo1.hProcess, INFINITE);
+				CloseHandle(ShExecInfo1.hProcess);
+
+				cout << "V primeru da zelite se izrisati kaksno datoteko, izberite '1' ali '0' za vstop v zacetni meni" << endl;
+				cout << "Vnesite zeljeno izbiro: " << endl;
+				cin >> izbiracsv;
+				if (izbiracsv == 1) {
+					izbiracsv = 1;
+				}
+				else if (izbiracsv == 0) {
+					izbiracsv = 0;
+				}
+
+			} while (izbiracsv == 1);
+
+			break;
+		}
+		case 6:
+		{
+			konec = 1;
+			cout << "Izbrali ste konec" << endl;
+			cout << endl;
+		}
+		}
+	} while (konec == 0);
+	return 0;
+}
+
+
+string funkcija() { //funkcija za določene zastavice ki jih vnese uporabnik
+
+	cout << "Vnesite kaksna naj bo hevristika  za usmerjanje?:" << endl; //izbira prve zastavice
+	cout << "Moznost izbire: -ff -r -lu -mu" << endl; //podane moznosti izbire
+	cout << "Vnesite zeljeno zastavico:" << endl;
+	string presledek = " ";
+	string prva = "";
+
+	for (; prva != "-ff" || "-r" || "-lu" || "-mu";) { //zankanje, dokler uporabnik ne vnese pravega tipa zastavice
+		cin >> prva; //vnos prve azstavice
+		if (prva == "-ff") {//preverjanje če je zastavica skladna -ff
+			break; //ob pravilnem vnosu, se zanka break.a
+		}
+		else if (prva == "-r") { //-r
+			break;
+		}
+		else if (prva == "-lu") { //-lu
+			break;
+		}
+		else if (prva == "-mu") { //-mu
+			break;
+		}
+		else cout << "Napacen vnos, poskusite ponovno (-ff -r -lu -mu)" << endl; //v nasprotnem primeru izpiše napačen vnos
+	}
+	cout << endl;
+	prva = prva;
+
+	cout << "Vnesite kaksna bo hevristika  za dodelitev valovne dolzine:" << endl; //vnos naslednje zastavice
+	cout << "Moznost izbire: -ff -r -lu -mu" << endl; //podane moznosti izbire
+	string druga = "";
+
+	for (; druga != "-ff" || "-r" || "-lu" || "-mu";) {
+		cin >> druga;
+		if (druga == "-ff") {//preverjanje če je druga zastavica skladna -ff
+			break;
+		}
+		else if (druga == "-r") {//-r
+			break;
+		}
+		else if (druga == "-lu") {//-lu
+			break;
+		}
+		else if (druga == "-mu") {//-mu
+			break;
+		}
+		else cout << "Napacen vnos, poskusite ponovno (-ff -r -lu -mu)" << endl;//v nasprotnem primeru izpiše napačen vnos
+	}
+	cout << endl;
+	druga = " " + druga;
+
+	cout << "Ali zelite dolociti najkrajse poti ali vse? (najkrajse -mp, vse -a)" << endl;
+	cout << "Vnesite vaso izbiro:" << endl; //zastavici -mp in -a
+	string tretja = "";
+	string tretjak = "";
+	string dvopicje = ":";
+
+	for (; tretja != "-mp" || "-a";) {
+		cin >> tretja; //izbira zastavice
+		if (tretja == "-mp") { //če se izbere zastavica -mp
+			cout << "Vnesite stevilo za najkrajse poti (1-99)" << endl;
+			string tretjast; //spremenljivka za sestavo zastavice
+			cin >> tretjast; //ce se izbere zastavice -mp se potrebno vnesti stevilo zastavice tipa stevilo
+			tretjak = tretja + dvopicje + tretjast; //sestava koncne zastavice
+			tretjak = "" + tretjak;
+			break;
+			if (tretja != "-mp") {
+				break;
+			}
+		}
+		else if (tretja == "-a") { //v primeru izbire zastavice -a
+			string tretjaloop = tretja;
+			cout << "Zelite vnesti minimalno stevilo etap v poti?" << endl; //zastavici -a lahko sledita -mn in -mx
+			cout << "'1' za da in '0' za ne!" << endl; //moznost izbire za zastavico -mn -navodila
+			int zacasno = 0;
+			cin >> zacasno; //vnos uporabnika če želi imeti zastavico nm
+			if (zacasno == 1) { //ce se doda zastavica -mn
+				cout << "Vnesite stevilo za minimalno etap v poti (1-99)" << endl;
+				string nmst;
+				cin >> nmst;
+				tretjak = tretja + presledek + "-mn" + dvopicje + nmst; //koncna sestava zastavice
+																		//tretjak = "" + tretjak;
+			}
+			else tretjak = tretja;
+			cout << "Zelite vnesti maksimalno stevilo etap v poti?" << endl; //moznost izbire se zastavice -mx
+			cout << "'1' za da in '0' za ne!" << endl; //navodila
+			int zacasno1 = 0;
+			cin >> zacasno1; //vnos uporabnika če želi imeti zastavico mx
+			if (zacasno1 == 1) { //ce se doda zastavica mx
+				cout << "Vnesite stevilo za maksimalno etap v poti (1-99)" << endl; //zastavici mx se se doda stevilo
+				string mnst1;
+				cin >> mnst1;
+				tretjak = tretjak + presledek + "-mx" + dvopicje + mnst1; //koncna sestava zastavice
+																		  //tretjak = "" + tretjak;
+				break;
+			}
+			else if (zacasno1 == 0) {
+				break;
+			}
+			else cout << "Napacen vnos" << endl; //izpis ob napačnem vnosu
+		}
+		else cout << "Napacen vnos. Vnesite ponovno (-mp , -a): " << endl; //izpis ob napačnem vnosu
+	}
+	tretjak = " " + tretjak;
+	cout << "Vnesli ste: " << tretjak; //izpis vnosa
+
+	cout << endl << "\n";
+	cout << "Ali zelite mnoziti matriko prometa?" << endl;
+	cout << "'1' za da in '0' za ne!" << endl;
+	string cetrta = "-f:"; //del zastavice
+	int mnoziti = 0;
+	cin >> mnoziti;
+	if (mnoziti == 1) {
+		cout << "Vnesite, s koliko zelite mnoziti vrednosti v matriki prometa (1-99):" << endl; //navodila za zastavico -f
+		string cetrtast = "";  //inicializacija drugega dela in ustvarjanje spremenljivke za drug del
+		cin >> cetrtast; //vnos števila zastavice
+		cetrta = cetrta + cetrtast; //končna sestava zastavice
+		cetrta = " " + cetrta;
+		cout << endl;
+	}
+	else if (mnoziti == 0) {
+		cout << "Izbrali ste ne." << endl;
+		cetrta = "";
+	}
+	else {
+		cout << "Napacna izbira, privzeta izbira NE" << endl;
+		cetrta = "";
+	}
+
+	cout << "Ali zelite deliti matriko prometa?" << endl;
+	cout << "'1' za da in '0' za ne!" << endl;
+	string peta = "-c:"; //del zastavice
+	int deliti = 0;
+	cin >> deliti;
+	if (deliti == 1) {
+		cout << "Vnesite s koliko zelite deliti vrednosti v matriki prometa (1-99):" << endl; //navodila za zastavico -c
+		string petast = ""; //inicializacija drugega dela in ustvarjanje spremenljivke za drug del
+		cin >> petast; //vnos števila zastavice
+		peta = peta + petast; //končna sestava zastavice
+		peta = " " + peta;
+		cout << endl;
+	}
+	else if (deliti == 0) {
+		cout << "Izbrali ste ne." << endl;
+		peta = "";
+	}
+	else {
+		cout << "Napacna izbira, privzeta izbira NE" << endl;
+		peta = "";
+	}
+
+	cout << "Ali zelite vnesti kolikokrat se bo poskusal vzpostaviti klic ob zasedenosti?" << endl;
+	cout << "'1' za da in '0' za ne!" << endl;
+	string sesta = "-at:"; //del zastavice
+	int klic = 0;
+	cin >> klic;
+	if (klic == 1) {
+		cout << "Vnesite kolikokrat se bo poskusal vzpostaviti isti klic ob zasedenosti (1-99):" << endl; //navodila za zastavico -at
+		string sestast = "";  //inicializacija drugega dela in ustvarjanje spremenljivke za drug del
+		cin >> sestast; //vnos števila zastavice
+		sesta = sesta + sestast; //končna sestava zastavice
+		sesta = " " + sesta;
+		cout << endl;
+	}
+	else if (klic == 0) {
+		cout << "Izbrali ste ne." << endl;
+		sesta = "";
+	}
+	else {
+		cout << "Napacna izbira, privzeta izbira NE" << endl;
+		sesta = "";
+	}
+
+	cout << "Ali zelite vnesti seme za tvorjenje nakljucnih stevil?" << endl;
+	cout << "'1' za da in '0' za ne!" << endl;
+	string sedma = "-s:"; //del zastavice
+	int seme = 0;
+	cin >> seme;
+	if (seme == 1) {
+		cout << "Vnesite seme za tvorjenje nakljucnih stevil (1-99):" << endl; //navodila za zastavico -s
+		string sedmast = "";  //inicializacija drugega dela in ustvarjanje spremenljivke za drug del
+		cin >> sedmast; //vnos števila zastavice
+		sedma = sedma + sedmast; //končna sestava zastavice
+		sedma = " " + sedma;
+		cout << endl;
+	}
+	else if (seme == 0) {
+		cout << "Izbrali ste ne." << endl;
+		sedma = "";
+	}
+	else {
+		cout << "Napacna izbira, privzeta izbira NE" << endl;
+		sedma = "";
+	}
+
+	string rezultat = prva + druga + tretjak + cetrta + peta + sesta + sedma;
+
+	string b = "hegons" + presledek + rezultat; //pomoč za ustvarjanje stringa za ukaz za klic z hegonsom
+
+	return b;
+};
+
+
+void replaceAll(std::string& source, const std::string& from, const std::string& to) //funkcija ki spremeni uporabnikov
+{																					 //direktorij za shellexecute
+	std::string newString;
+	newString.reserve(source.length());
+
+	std::string::size_type lastPos = 0;
+	std::string::size_type findPos;
+
+	while (std::string::npos != (findPos = source.find(from, lastPos)))
+	{
+		newString.append(source, lastPos, findPos - lastPos);
+		newString += to;
+		lastPos = findPos + from.length();
+	}
+	newString += source.substr(lastPos);
+	source.swap(newString);
+}
